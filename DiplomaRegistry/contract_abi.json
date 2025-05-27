@@ -1,0 +1,197 @@
+[
+    {
+      "type": "constructor",
+      "inputs": [
+        { "name": "_fee", "type": "uint256", "internalType": "uint256" }
+      ],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "allCCs",
+      "inputs": [
+        { "name": "", "type": "uint256", "internalType": "uint256" }
+      ],
+      "outputs": [
+        { "name": "", "type": "string", "internalType": "string" }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "clearVerifiedStudent",
+      "inputs": [
+        { "name": "cc", "type": "string", "internalType": "string" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "diplomaFee",
+      "inputs": [],
+      "outputs": [
+        { "name": "", "type": "uint256", "internalType": "uint256" }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getAllVerifiedStudents",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "tuple[]",
+          "internalType": "struct DiplomaRegistry.VerifiedStudent[]",
+          "components": [
+            { "name": "cc", "type": "string", "internalType": "string" },
+            { "name": "isEligible", "type": "bool", "internalType": "bool" },
+            { "name": "hasPaid", "type": "bool", "internalType": "bool" }
+          ]
+        }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "issueDiploma",
+      "inputs": [
+        { "name": "diplomaSig", "type": "bytes", "internalType": "bytes" },
+        { "name": "ccSig", "type": "bytes", "internalType": "bytes" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "issuedDiplomas",
+      "inputs": [
+        { "name": "", "type": "bytes", "internalType": "bytes" }
+      ],
+      "outputs": [
+        { "name": "", "type": "bytes", "internalType": "bytes" }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "markEligible",
+      "inputs": [
+        { "name": "cc", "type": "string", "internalType": "string" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "markIneligible",
+      "inputs": [
+        { "name": "cc", "type": "string", "internalType": "string" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "payForDiploma",
+      "inputs": [
+        { "name": "cc", "type": "string", "internalType": "string" }
+      ],
+      "outputs": [],
+      "stateMutability": "payable"
+    },
+    {
+      "type": "function",
+      "name": "resetPayment",
+      "inputs": [
+        { "name": "cc", "type": "string", "internalType": "string" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "submitCC",
+      "inputs": [
+        { "name": "cc", "type": "string", "internalType": "string" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "university",
+      "inputs": [],
+      "outputs": [
+        { "name": "", "type": "address", "internalType": "address" }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "verifiedStudents",
+      "inputs": [
+        { "name": "", "type": "string", "internalType": "string" }
+      ],
+      "outputs": [
+        { "name": "cc", "type": "string", "internalType": "string" },
+        { "name": "isEligible", "type": "bool", "internalType": "bool" },
+        { "name": "hasPaid", "type": "bool", "internalType": "bool" }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "verifyDiploma",
+      "inputs": [
+        { "name": "diplomaSig", "type": "bytes", "internalType": "bytes" },
+        { "name": "ccSig", "type": "bytes", "internalType": "bytes" }
+      ],
+      "outputs": [
+        { "name": "", "type": "bool", "internalType": "bool" }
+      ],
+      "stateMutability": "view"
+    },
+    {
+      "type": "event",
+      "name": "DiplomaIssued",
+      "inputs": [
+        { "name": "diplomaSig", "type": "bytes", "indexed": false, "internalType": "bytes" },
+        { "name": "ccSig", "type": "bytes", "indexed": false, "internalType": "bytes" }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "StudentMarkedEligible",
+      "inputs": [
+        { "name": "cc", "type": "string", "indexed": false, "internalType": "string" }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "StudentMarkedIneligible",
+      "inputs": [
+        { "name": "cc", "type": "string", "indexed": false, "internalType": "string" }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "StudentPaidForDiploma",
+      "inputs": [
+        { "name": "cc", "type": "string", "indexed": false, "internalType": "string" }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
+      "name": "StudentSubmittedCC",
+      "inputs": [
+        { "name": "cc", "type": "string", "indexed": false, "internalType": "string" }
+      ],
+      "anonymous": false
+    }
+  ]
