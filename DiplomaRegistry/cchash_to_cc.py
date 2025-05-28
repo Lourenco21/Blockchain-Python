@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import csv
 import os
+from university.student_data import get_student_id_by_cc
+from flask import send_file
 
 app = Flask(__name__)
 CORS(app)  # Enable cross-origin requests
@@ -43,41 +45,37 @@ def store_cc():
 
     return jsonify({'status': 'stored'})
 
-# New endpoint to validate diploma PDF
-@app.route('/api/validate-diploma', methods=['POST'])
-def validate_diploma():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+@app.route('/api/student-id', methods=['GET', 'POST'])
+def get_student_id():
+    if request.method == 'POST':
+        data = request.get_json()
+        cc = data.get('cc')
+    else:  # GET
+        cc = request.args.get('cc')
+    if not cc:
+        return jsonify({'error': 'Missing CC'}), 400
 
-    # Check if PDF
-    if not file.filename.lower().endswith('.pdf'):
-        return jsonify({'message': 'Ficheiro não é diploma'}), 400
+    students_file = os.path.join(CSV_DIR, 'students.csv')
+    student_id = get_student_id_by_cc(cc, csv_path=students_file)
+    if student_id:
+        return jsonify({'student_id': student_id})
+    else:
+        return jsonify({'error': 'Student not found'}), 404
 
-    try:
-        # Read PDF from file stream
-        pdf_document = fitz.open(stream=file.read(), filetype='pdf')
 
-        # Extract text from all pages
-        text = ""
-        for page in pdf_document:
-            text += page.get_text()
+@app.route('/api/diploma-pdf')
+def diploma_pdf():
+    student_id = request.args.get('student_id')
+    if not student_id:
+        return jsonify({'error': 'Missing student_id'}), 400
 
-        pdf_document.close()
+    diploma_path = os.path.join(r"C:\Users\User\OneDrive\Documents\GitHub\Blockchain-Python\DiplomaRegistry\Diplomas", f'diploma_{student_id}.pdf')
 
-        # Validate diploma structure
-        is_valid = validate_diploma_structure(text)
+    if not os.path.exists(diploma_path):
+        return jsonify({'error': 'Diploma not found'}), 404
 
-        if is_valid:
-            return jsonify({'message': 'Diploma Reconhecido'})
-        else:
-            return jsonify({'message': 'Ficheiro não é diploma'})
-
-    except Exception as e:
-        return jsonify({'error': f'Failed to process PDF: {str(e)}'}), 500
+    return send_file(diploma_path, as_attachment=True)
 
 
 if __name__ == '__main__':

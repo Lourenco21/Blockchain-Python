@@ -3,6 +3,7 @@ let contract;
 let contractABI;
 let lastCcHash = null;
 let activeAccount = null;
+let activecc = null;
 
 const contractAddress = "0x5873779105bCFFE7E7DBF7dAE13075a61E3E6bDB";
 
@@ -91,6 +92,7 @@ async function submitCC() {
 
     const ccHash = web3.utils.keccak256(cc);
     const from = activeAccount;
+    activecc = cc;
     lastCcHash = ccHash;
 
     // Send tx to smart contract
@@ -257,7 +259,7 @@ async function updateFee() {
 
 downloadPdfBtn.addEventListener("click", async () => {
   // Get the CC from the input or prompt the user if not available
-  const cc = document.getElementById("cc-input").value || prompt("Please enter your CC again:");
+  const cc = activecc;
   if (!cc) return alert("CC not provided.");
 
   // Request the student number from the backend using the CC
