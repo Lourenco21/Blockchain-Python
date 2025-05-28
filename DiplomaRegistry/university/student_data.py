@@ -10,14 +10,22 @@ def get_student_id_by_cc(cc: str, csv_path='students.csv'):
                 return row.get('student_id')
     return None
 
-def is_student_eligible(cc: str, csv_path='students.csv'):
+def check_student_status(cc: str, csv_path='students.csv'):
     with open(csv_path, newline='', encoding='utf-8') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             if row['cc'] == cc:
-                date_final = datetime.strptime(row['date_final'], '%Y-%m-%d').date()
-                return date_final <= datetime.today().date()
-    return False
+                date_final_str = row.get('date_final', '').strip()  # Remove espaços extras
+                if not date_final_str:  # Se estiver vazio, considera inelegível
+                    return False, "Estudante ainda não concluiu o curso"
+                try:
+                    date_final = datetime.strptime(date_final_str, '%Y-%m-%d').date()
+                except ValueError:
+                    return False, f"Formato inválido da data final: {date_final_str}"
+                if date_final <= datetime.today().date():
+                    return True, "Estudante elegível"
+        return False, "Estudante não encontrado na base de dados"
+
 
 def get_cc_by_hash(cc_hash, csv_path='cc_hash_map.csv'):
     try:

@@ -3,7 +3,7 @@ import time
 from web3 import Web3
 from createPdf import generate_diploma_by_id
 from utils import keccak256_hash, sign_hash
-from student_data import get_student_id_by_cc, is_student_eligible,remove_student_by_hash,get_cc_by_hash
+from student_data import get_student_id_by_cc, check_student_status,remove_student_by_hash,get_cc_by_hash
 
 class DiplomaRegistryHandler:
     def __init__(self, provider_url, contract_address, abi_path, university_account, private_key):
@@ -18,33 +18,29 @@ class DiplomaRegistryHandler:
         with open(file_path, 'rb') as f:
             return self.w3.keccak(f.read())
 
+    def send_transaction(self, function_call):
+        tx = function_call.build_transaction({
+            'from': self.university_account,
+            'nonce': self.w3.eth.get_transaction_count(self.university_account),
+            'gas': 3000000,
+            'gasPrice': self.w3.to_wei('20', 'gwei')
+        })
+
+        signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
+        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        print(f"⏳ Transaction sent: {tx_hash.hex()}")
+
+        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        print(f"✅ Transaction confirmed: {receipt['transactionHash'].hex()}")
+        return receipt
+
     def mark_eligible(self, cc):
         print(f"➡️ Marking student {cc} as eligible...")
-        tx = self.contract.functions.markEligible(cc).build_transaction({
-            'from': self.university_account,
-            'nonce': self.w3.eth.get_transaction_count(self.university_account),
-            'gas': 3000000,
-            'gasPrice': self.w3.to_wei('20', 'gwei')
-        })
-        signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
-        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        print(f"⏳ Waiting for tx confirmation...")
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        print(f"✅ Marked eligible in tx: {receipt['transactionHash'].hex()}")
+        return self.send_transaction(self.contract.functions.markEligible(cc))
 
-    def mark_ineligible(self, cc):
+    def mark_ineligible(self, cc, reason):
         print(f"➡️ Marking student {cc} as ineligible...")
-        tx = self.contract.functions.markIneligible(cc).build_transaction({
-            'from': self.university_account,
-            'nonce': self.w3.eth.get_transaction_count(self.university_account),
-            'gas': 3000000,
-            'gasPrice': self.w3.to_wei('20', 'gwei')
-        })
-        signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
-        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        print(f"⏳ Waiting for tx confirmation...")
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        print(f"✅ Marked ineligible in tx: {receipt['transactionHash'].hex()}")
+        return self.send_transaction(self.contract.functions.markIneligible(cc, reason))
 
     def issue_diploma_for_cc(self, cc, pdf_path):
         print(f"🎓 Issuing diploma for student CC: {cc}")
@@ -58,21 +54,9 @@ class DiplomaRegistryHandler:
         print(f"📄 Diploma Hash: {diploma_hash.hex()}")
         print(f"🖋️ Signed Diploma Hash (signature): {diploma_signature.hex()}")
 
-        tx = self.contract.functions.issueDiploma(
-            diploma_signature,
-            cc_signature
-        ).build_transaction({
-            'from': self.university_account,
-            'nonce': self.w3.eth.get_transaction_count(self.university_account),
-            'gas': 3000000,
-            'gasPrice': self.w3.to_wei('20', 'gwei')
-        })
-
-        signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=self.private_key)
-        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        print(f"⏳ Issuing diploma transaction sent: {tx_hash.hex()}")
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        print(f"✅ Diploma issued in tx: {receipt['transactionHash'].hex()}")
+        return self.send_transaction(
+            self.contract.functions.issueDiploma(diploma_signature, cc_signature)
+        )
 
 
     def listen_to_events(self):
@@ -109,11 +93,11 @@ class DiplomaRegistryHandler:
                 cc = get_cc_by_hash(hashed_cc)
                 print(f"📝 New CC submitted: {cc}")
 
-                if is_student_eligible(cc):
+                status, reason = check_student_status(cc)
+                if status:
                     self.mark_eligible(hashed_cc)
                 else:
-                    self.mark_ineligible(hashed_cc)
-
+                    self.mark_ineligible(hashed_cc, reason)
             for event in studentremoved_filter.get_new_entries():
                 remove_student_by_hash(event.args['ccHash'])
 
