@@ -1,13 +1,10 @@
 let web3;
-let subscription;
 let contract;
 let contractABI;
+let lastCcHash = null;
+let activeAccount = null;
 
-<<<<<<< Updated upstream
 const contractAddress = "0x5873779105bCFFE7E7DBF7dAE13075a61E3E6bDB";
-=======
-const contractAddress = "0xE9633177ae8Ae9310E377F43226a69236124a3A4";
->>>>>>> Stashed changes
 
 const connectWalletBtn = document.getElementById("connect-wallet-btn");
 const ccSection = document.getElementById("cc-section");
@@ -17,6 +14,9 @@ const ccStatus = document.getElementById("cc-status");
 const walletConnected = document.getElementById("wallet-connected");
 const paymentSection = document.getElementById("payment-section");
 const costLabel = document.getElementById("cost-label");
+const payBtn = document.getElementById("pay-btn");
+const paymentStatus = document.getElementById("payment-status");
+const downloadPdfBtn = document.getElementById("download-pdf-btn");
 
 async function loadABI() {
   try {
@@ -39,7 +39,7 @@ async function connectWallet() {
   try {
     // Trigger MetaMask prompt to always ask the active account
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    const activeAccount = accounts[0];
+    activeAccount = accounts[0];
 
     if (!contractABI) await loadABI();
 
@@ -90,8 +90,8 @@ async function submitCC() {
     ccStatus.style.color = "black";
 
     const ccHash = web3.utils.keccak256(cc);
-    const accounts = await web3.eth.getAccounts();
-    const from = accounts[0];
+    const from = activeAccount;
+    lastCcHash = ccHash;
 
     // Send tx to smart contract
     const tx = await contract.methods.submitCC(ccHash).send({ from, gas: 300000 });
@@ -127,6 +127,40 @@ async function submitCC() {
     ccStatus.style.color = "red";
   }
 }
+
+async function payForDiploma() {
+  paymentStatus.textContent = "Processing payment...";
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  if (!lastCcHash) {
+    paymentStatus.textContent = "Submit your CC first.";
+    paymentStatus.style.color = "red";
+    return;
+  }
+  try {
+    paymentStatus.textContent = "Processing payment...";
+    paymentStatus.style.color = "black";
+
+    const from = activeAccount;
+    const feeWei = await contract.methods.getFee().call();
+
+    // Envia a transação para o contrato
+    const tx = await contract.methods.payForDiploma(lastCcHash).send({
+      from,
+      value: feeWei,
+      gas: 300000
+    });
+
+    paymentStatus.textContent = "✅ Payment done successfully!";
+    paymentStatus.style.color = "green";
+    downloadPdfBtn.style.display = "inline-block";
+    console.log("Tx hash:", tx.transactionHash);
+  } catch (err) {
+    console.error("Error on payment:", err);
+    paymentStatus.textContent = "❌ " + (err.message || "Unknown error");
+    paymentStatus.style.color = "red";
+  }
+}
+
 
 
 
@@ -221,6 +255,34 @@ async function updateFee() {
   }
 }
 
+downloadPdfBtn.addEventListener("click", async () => {
+  // Get the CC from the input or prompt the user if not available
+  const cc = document.getElementById("cc-input").value || prompt("Please enter your CC again:");
+  if (!cc) return alert("CC not provided.");
+
+  // Request the student number from the backend using the CC
+  const resp = await fetch(`http://127.0.0.1:5000/api/student-id?cc=${cc}`);
+  if (!resp.ok) return alert("Error fetching student number.");
+  const { student_id } = await resp.json();
+
+  // Download the PDF using the student number
+  const response = await fetch(`http://127.0.0.1:5000/api/diploma-pdf?student_id=${student_id}`);
+  if (response.ok) {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `diploma_${student_id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } else {
+    alert("Error downloading diploma.");
+  }
+});
+
 
 connectWalletBtn.onclick = connectWallet;
 submitCcBtn.onclick = submitCC;
+payBtn.onclick = payForDiploma;

@@ -2,8 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import csv
 import os
-import re
-import fitz  # PyMuPDF for PDF text extraction
 
 app = Flask(__name__)
 CORS(app)  # Enable cross-origin requests
@@ -13,20 +11,6 @@ CSV_DIR = os.path.join(BASE_DIR, 'university')
 os.makedirs(CSV_DIR, exist_ok=True)
 CSV_FILE = os.path.join(CSV_DIR, 'cc_hash_map.csv')
 
-# Regex validation function
-def validate_diploma_structure(text):
-    diploma_pattern = re.compile(
-        r"Portador do Bilhete de Identidade / Cartão de Cidadão n\.º \d{6,}, de nacionalidade\s+"
-        r"[A-Za-zÀ-ÿ\s]+, concluiu todas as unidades curriculares que integram o plano de estudos do curso de\s+"
-        r"Licenciatura em [A-Za-zÀ-ÿ\s]+ \(ver especificação no verso\), aos \d{4}-\d{2}-\d{2}, tendo obtido \d+ créditos, "
-        r"pelo que, em conformidade com as disposições legais em vigor, lhe mandei passar o presente diploma, "
-        r"conferindo-lhe o grau de [A-Za-zÀ-ÿ\s]+ em [A-Za-zÀ-ÿ\s]+ com a classificação final de \d{1,2} valores\.",
-        re.MULTILINE
-    )
-    match = diploma_pattern.search(text)
-    if not match:
-        return False
-    return True
 
 @app.route('/api/store-cc', methods=['POST'])
 def store_cc():
