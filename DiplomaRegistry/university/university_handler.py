@@ -46,13 +46,14 @@ class DiplomaRegistryHandler:
         receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
         print(f"✅ Marked ineligible in tx: {receipt['transactionHash'].hex()}")
 
-    def issue_diploma_for_cc(self, cc,ccHash, pdf_path):
+    def issue_diploma_for_cc(self, cc, pdf_path):
         print(f"🎓 Issuing diploma for student CC: {cc}")
+        cc_hash = keccak256_hash(cc.encode('utf-8'))
         diploma_hash = self.hash_file(pdf_path)
-        cc_signature = sign_hash(ccHash, self.private_key)
+        cc_signature = sign_hash(cc_hash, self.private_key)
         diploma_signature = sign_hash(diploma_hash, self.private_key)
 
-        print(f"🔑 CC Hash: {ccHash.hex()}")
+        print(f"🔑 CC Hash: {cc_hash.hex()}")
         print(f"🖋️ Signed CC Hash (signature): {cc_signature.hex()}")
         print(f"📄 Diploma Hash: {diploma_hash.hex()}")
         print(f"🖋️ Signed Diploma Hash (signature): {diploma_signature.hex()}")
@@ -150,6 +151,6 @@ class DiplomaRegistryHandler:
                     print(f"❌ Failed to generate diploma PDF for student ID {student_id}")
                     continue
 
-                self.issue_diploma_for_cc(cc,hashed_cc, pdf_path)
+                self.issue_diploma_for_cc(cc, pdf_path)
 
             time.sleep(2)
