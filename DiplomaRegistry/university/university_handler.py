@@ -1,7 +1,7 @@
 import json
 import time
 from web3 import Web3
-from DiplomaRegistry.university.createPdf import generate_diploma_by_id
+from createPdf import generate_diploma_by_id
 from utils import keccak256_hash, sign_hash
 from student_data import get_student_id_by_cc, is_student_eligible,remove_student_by_hash,get_cc_by_hash
 
