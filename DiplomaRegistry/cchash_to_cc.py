@@ -4,39 +4,45 @@ import csv
 import os
 
 app = Flask(__name__)
-CORS(app)  # Allow cross-origin requests from frontend (like localhost:3000)
+CORS(app)  # Enable cross-origin requests
 
-# Create full path to CSV file
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-CSV_FILE = os.path.join(BASE_DIR, 'university', 'cc_hash_map.csv')
-
-# Ensure 'university' directory exists
-os.makedirs(os.path.join(BASE_DIR, 'university'), exist_ok=True)
+CSV_DIR = os.path.join(BASE_DIR, 'university')
+os.makedirs(CSV_DIR, exist_ok=True)
+CSV_FILE = os.path.join(CSV_DIR, 'cc_hash_map.csv')
 
 @app.route('/api/store-cc', methods=['POST'])
 def store_cc():
-    try:
-        data = request.get_json()
-        cc = data.get('cc')
-        cc_hash = data.get('ccHash')
+    data = request.get_json()
+    cc = data.get('cc')
+    cc_hash = data.get('ccHash')
 
-        if not cc or not cc_hash:
-            return jsonify({'error': 'Missing CC or CC hash'}), 400
+    if not cc or not cc_hash:
+        return jsonify({'error': 'Missing CC or CC hash'}), 400
 
-        # Write to CSV file
-        file_exists = os.path.isfile(CSV_FILE)
-        with open(CSV_FILE, mode='a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(['cc', 'cc_hash'])  # header row
-            writer.writerow([cc, cc_hash])
+    # Check if entry already exists
+    already_exists = False
+    file_exists = os.path.exists(CSV_FILE)
 
-        return jsonify({'status': 'stored'})
+    if file_exists:
+        with open(CSV_FILE, mode='r', newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['cc'] == cc or row['cc_hash'] == cc_hash:
+                    already_exists = True
+                    break
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    if already_exists:
+        return jsonify({'status': 'already exists'})
 
+    # Write new row
+    with open(CSV_FILE, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists or os.stat(CSV_FILE).st_size == 0:
+            writer.writerow(['cc', 'cc_hash'])  # header
+        writer.writerow([cc, cc_hash])
+
+    return jsonify({'status': 'stored'})
 
 if __name__ == '__main__':
     app.run(debug=True)
-

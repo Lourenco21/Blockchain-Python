@@ -2,17 +2,18 @@ let web3;
 let contract;
 let contractABI;
 
-const contractAddress = "0x2A3aC40C8636eA29e9C4398Beb922d61bf4ABbE3";
+const contractAddress = "0xBdcb5aC5De6218B007b8af9Aef67f92F44b27539";
 
 const connectWalletBtn = document.getElementById("connect-wallet-btn");
 const ccSection = document.getElementById("cc-section");
 const submitCcBtn = document.getElementById("submit-cc-btn");
 const ccInput = document.getElementById("cc-input");
 const ccStatus = document.getElementById("cc-status");
+const walletConnected = document.getElementById("wallet-connected");
 
 async function loadABI() {
   try {
-    const response = await fetch("/contract_abi.json");
+    const response = await fetch("../contract_abi.json");
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
     contractABI = await response.json();
     console.log("✅ ABI loaded.");
@@ -20,11 +21,6 @@ async function loadABI() {
     console.error("Failed to load ABI:", err);
     alert("Couldn't load contract ABI.");
   }
-}
-
-async function getActiveAccount() {
-  const accounts = await window.ethereum.request({ method: "eth_accounts" });
-  return accounts[0]; // returns the active account, or undefined
 }
 
 async function connectWallet() {
@@ -44,9 +40,11 @@ async function connectWallet() {
     contract = new web3.eth.Contract(contractABI, contractAddress);
 
     console.log("✅ Connected account:", activeAccount);
-    connectWalletBtn.textContent = `Connected: ${activeAccount}`;
     connectWalletBtn.disabled = true;
     ccSection.style.display = "block";
+    connectWalletBtn.style.display = 'none';
+    walletConnected.style.display = 'inline-block';
+    walletConnected.textContent = `Connected wallet: ${activeAccount}`;
   } catch (err) {
     console.error("Wallet connection failed:", err);
     alert("Connection failed.");
@@ -54,7 +52,7 @@ async function connectWallet() {
 }
 
 async function submitCC() {
-  const cc = ccInput.value.trim(); // Always a string
+  const cc = ccInput.value.trim();
   if (!cc) {
     ccStatus.textContent = "Please enter your CC";
     ccStatus.style.color = "red";
@@ -65,47 +63,38 @@ async function submitCC() {
     ccStatus.textContent = "Submitting CC...";
     ccStatus.style.color = "black";
 
-    const ccHash = web3.utils.keccak256(cc); // Step 1: Hash it
-
-    // Step 2: Save both CC and its hash to university backend
-    await fetch('http://127.0.0.1:5000/api/store-cc', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ cc, ccHash })
-    });
-
-    // Step 3: Send only hash to blockchain
+    const ccHash = web3.utils.keccak256(cc);
     const accounts = await web3.eth.getAccounts();
     const from = accounts[0];
 
-    const tx = await contract.methods.submitCC(ccHash).send({
-      from,
-      gas: 300000
-    });
+    // Send tx to smart contract
+    const tx = await contract.methods.submitCC(ccHash).send({ from, gas: 300000 });
 
     ccStatus.textContent = "✅ CC submitted!";
     ccStatus.style.color = "green";
     ccInput.value = "";
+
     console.log("Transaction hash:", tx.transactionHash);
 
+    // Now send to Flask backend
+    const response = await fetch('http://127.0.0.1:5000/api/store-cc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cc, ccHash })
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+      console.log('Stored in backend:', result.status);
+    } else {
+      console.error('Backend error:', result.error);
+    }
   } catch (err) {
     console.error("Submit failed:", err);
-
-    const message = err.message || "";
-
-    if (message.includes("Already submitted")) {
-      ccStatus.textContent = "❌ This CC has already been submitted.";
-    } else {
-      ccStatus.textContent = "❌ Submission failed: " + message;
-    }
-
+    ccStatus.textContent = "❌ " + (err.message || "Unknown error");
     ccStatus.style.color = "red";
   }
 }
-
-
 
 
 if (window.ethereum) {
