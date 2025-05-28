@@ -3,7 +3,11 @@ let subscription;
 let contract;
 let contractABI;
 
+<<<<<<< Updated upstream
 const contractAddress = "0x5873779105bCFFE7E7DBF7dAE13075a61E3E6bDB";
+=======
+const contractAddress = "0xE9633177ae8Ae9310E377F43226a69236124a3A4";
+>>>>>>> Stashed changes
 
 const connectWalletBtn = document.getElementById("connect-wallet-btn");
 const ccSection = document.getElementById("cc-section");
@@ -123,6 +127,7 @@ async function submitCC() {
     ccStatus.style.color = "red";
   }
 }
+
 
 
 if (window.ethereum) {

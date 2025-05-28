@@ -18,6 +18,12 @@ if __name__ == "__main__":
         raise ValueError("CONTRACT_ADDRESS not found in environment")
     if not provider_url:
         raise ValueError("PROVIDER_URL not found in environment")
+<<<<<<< Updated upstream
+=======
+
+    if not private_key:
+        raise ValueError("PRIVATE_KEY not found in environment")
+>>>>>>> Stashed changes
 
     handler = DiplomaRegistryHandler(provider_url, contract_address, abi_path, university_account, private_key)
     handler.listen_to_events()
