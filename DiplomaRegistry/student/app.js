@@ -5,7 +5,7 @@ let lastCcHash = null;
 let activeAccount = null;
 let activecc = null;
 
-const contractAddress = "0x5873779105bCFFE7E7DBF7dAE13075a61E3E6bDB";
+const contractAddress = "0x7B49527005EA810909eD6Dd7D7c7049fD001B9e0";
 
 const connectWalletBtn = document.getElementById("connect-wallet-btn");
 const ccSection = document.getElementById("cc-section");
@@ -44,7 +44,7 @@ async function connectWallet() {
 
     if (!contractABI) await loadABI();
 
-    web3 = new Web3("http://172.24.192.1:7545"); // HTTP provider
+    web3 = new Web3(window.ethereum); // HTTP provider
 
     contract = new web3.eth.Contract(contractABI, contractAddress);
 
@@ -91,6 +91,7 @@ async function submitCC() {
     ccStatus.style.color = "black";
 
     const ccHash = web3.utils.keccak256(cc);
+
     const from = activeAccount;
     activecc = cc;
     lastCcHash = ccHash;
