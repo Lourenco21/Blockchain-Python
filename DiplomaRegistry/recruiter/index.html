@@ -8,12 +8,21 @@
 </head>
 <body>
 
+  <header class="header">
+      <img src="iscte.png" alt="ISCTE Logo" class="logo" />
+  </header>
+
   <div class="container">
-    <h2>Upload de Arquivo</h2>
-    <form id="uploadForm">
+    <h1>Verification Portal</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+
+      <input style="max-width: 150px; margin-bottom: 10px;" type="text" id="ccInput" name="cc" placeholder="Enter your CC" required />
+      <br><br>
+      <label for="fileInput" class="file-label">Choose File</label>
       <input type="file" id="fileInput" name="file" required />
-      <div class="file-name" id="fileName">Nenhum arquivo selecionado</div>
-      <button type="submit">Enviar</button>
+      <div class="file-name" id="fileName">No file Selected</div>
+      <br>
+      <button style="margin-bottom: 20px" type="submit">Send for validation</button>
     </form>
   </div>
 
