@@ -2,11 +2,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import csv
 import os
-from university.student_data import get_student_id_by_cc
 from flask import send_file
-
+from university.student_data import get_student_id_by_cc
+import tempfile
+from university.diploma_verification import diploma_verification
 app = Flask(__name__)
-CORS(app)  # Enable cross-origin requests
+CORS(app)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 CSV_DIR = os.path.join(BASE_DIR, 'university')
@@ -70,12 +71,40 @@ def diploma_pdf():
     if not student_id:
         return jsonify({'error': 'Missing student_id'}), 400
 
-    diploma_path = os.path.join(r"C:\Users\User\OneDrive\Documents\GitHub\Blockchain-Python\DiplomaRegistry\Diplomas", f'diploma_{student_id}.pdf')
+    diploma_path = os.path.join(r"C:\Users\strik\Documents\GitHub\Blockchain-Python\DiplomaRegistry\Diplomas", f'diploma_{student_id}.pdf')
 
     if not os.path.exists(diploma_path):
         return jsonify({'error': 'Diploma not found'}), 404
 
     return send_file(diploma_path, as_attachment=True)
+
+
+@app.route('/api/diploma-validation', methods=['POST'])
+def diploma_validation():
+    file = request.files.get('file')
+    cc = request.form.get('cc')
+
+    if not file or not cc:
+        return jsonify({'valid': False, 'message': 'Missing file or CC'}), 400
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            file.save(temp.name)
+            temp_path = temp.name
+
+        # Call verification function
+        is_valid = diploma_verification(temp.name, cc)
+
+        # Delete the file after verification
+        os.remove(temp_path)
+
+        if is_valid:
+            return jsonify({'valid': True, 'message': 'Diploma is valid'})
+        else:
+            return jsonify({'valid': False, 'message': 'Diploma verification failed'})
+
+    except Exception as e:
+        return jsonify({'valid': False, 'message': str(e)}), 500
 
 
 if __name__ == '__main__':
