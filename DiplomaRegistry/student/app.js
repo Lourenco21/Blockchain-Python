@@ -5,7 +5,7 @@ let lastCcHash = null;
 let activeAccount = null;
 let activecc = null;
 
-const contractAddress = "0x7B49527005EA810909eD6Dd7D7c7049fD001B9e0";
+const contractAddress = "0xc1ac64b3730dC4c59af6129943f24341E562432A";
 
 const connectWalletBtn = document.getElementById("connect-wallet-btn");
 const ccSection = document.getElementById("cc-section");
@@ -48,22 +48,6 @@ async function connectWallet() {
 
     contract = new web3.eth.Contract(contractABI, contractAddress);
 
-    // Instead of .once() with WS, fetch past events periodically or on demand
-    // Example to get events from latest block periodically:
-    setInterval(async () => {
-      try {
-        const events = await contract.getPastEvents('StudentMarkedEligible', {
-          fromBlock: 'latest',
-          toBlock: 'latest'
-        });
-        events.forEach(event => {
-          // check event.returnValues.ccHash and update UI accordingly
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    }, 5000); // every 5 seconds or adjust interval
-
     console.log("✅ Connected account:", activeAccount);
     connectWalletBtn.disabled = true;
     ccSection.style.display = "block";
@@ -91,24 +75,21 @@ async function submitCC() {
     ccStatus.style.color = "black";
 
     const ccHash = web3.utils.keccak256(cc);
-
     const from = activeAccount;
     activecc = cc;
     lastCcHash = ccHash;
 
-    // Send tx to smart contract
+    // Submit transaction
     const tx = await contract.methods.submitCC(ccHash).send({ from, gas: 300000 });
+
+    // ✅ Get block number from transaction receipt
+    const receipt = await web3.eth.getTransactionReceipt(tx.transactionHash);
+    const txBlock = receipt.blockNumber;
 
     ccStatus.textContent = "✅ CC submitted!";
     ccStatus.style.color = "green";
     ccInput.value = "";
 
-    console.log("Transaction hash:", tx.transactionHash);
-
-    await checkEvents(ccHash);
-    console.log(ccHash);
-
-    // Now send to Flask backend
     const response = await fetch('http://127.0.0.1:5000/api/store-cc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -122,14 +103,16 @@ async function submitCC() {
       console.error('Backend error:', result.error);
     }
 
-
-
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    await checkEvents(ccHash, txBlock);
+    console.log(ccHash);
   } catch (err) {
     console.error("Submit failed:", err);
     ccStatus.textContent = "❌ " + (err.message || "Unknown error");
     ccStatus.style.color = "red";
   }
 }
+
 
 async function payForDiploma() {
   paymentStatus.textContent = "Processing payment...";
@@ -178,27 +161,25 @@ if (window.ethereum) {
   });
 }
 
-async function checkEvents(ccHash) {
+async function checkEvents(ccHash, block) {
   try {
+    const currentBlock = await web3.eth.getBlockNumber();
+
     const studentMarkedEligible = await contract.getPastEvents('StudentMarkedEligible', {
-      fromBlock: 0,
+      fromBlock: block,
       toBlock: 'latest'
     });
 
     const studentAlreadyEligible = await contract.getPastEvents('StudentAlreadyEligible', {
-      fromBlock: 0,
+      fromBlock: block,
       toBlock: 'latest'
     });
 
     const studentMarkedIneligible = await contract.getPastEvents('StudentMarkedIneligible', {
-      fromBlock: 0,
+      fromBlock: block,
       toBlock: 'latest'
     });
 
-    const studentAlreadyIneligible = await contract.getPastEvents('StudentAlreadyIneligible', {
-      fromBlock: 0,
-      toBlock: 'latest'
-    });
 
 
     const eligibleEvent = studentMarkedEligible.find(e => e.returnValues.ccHash === ccHash);
@@ -207,7 +188,6 @@ async function checkEvents(ccHash) {
       ccStatus.style.color = "green";
       ccSection.style.display = "none";
       paymentSection.style.display = "block";
-      return true;
     }
 
     const alreadyEligibleEvent = studentAlreadyEligible.find(e => e.returnValues.ccHash === ccHash);
@@ -216,21 +196,13 @@ async function checkEvents(ccHash) {
       ccStatus.style.color = "green";
       ccSection.style.display = "none";
       paymentSection.style.display = "block";
-      return true;
     }
 
     const ineligibleEvent = studentMarkedIneligible.find(e => e.returnValues.ccHash === ccHash);
     if (ineligibleEvent) {
-      ccStatus.textContent = "This cc is not eligible for the diploma!";
+      const reason = ineligibleEvent.returnValues.reason;
+      ccStatus.textContent = `${reason}`;
       ccStatus.style.color = "red";
-      return false;
-    }
-
-    const alreadyIneligibleEvent = studentAlreadyIneligible.find(e => e.returnValues.ccHash === ccHash);
-    if (alreadyIneligibleEvent) {
-      ccStatus.textContent = "This cc is still not eligible for the diploma!";
-      ccStatus.style.color = "red";
-      return false;
     }
 
     return false;
@@ -243,8 +215,6 @@ async function updateFee() {
   try {
     const feeWei = await contract.methods.getFee().call();
     const feeEth = web3.utils.fromWei(feeWei, "ether");
-
-    // Fetch ETH to EUR exchange rate from a public API (example: CoinGecko)
     const response = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=eur");
     const data = await response.json();
     const ethToEur = data.ethereum.eur;

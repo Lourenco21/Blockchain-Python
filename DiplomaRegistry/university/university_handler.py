@@ -1,5 +1,8 @@
 import json
 import time
+from contextlib import nullcontext
+
+from traits.trait_types import self
 from web3 import Web3
 from createPdf import generate_diploma_by_id
 from utils import keccak256_hash, sign_hash
@@ -34,13 +37,13 @@ class DiplomaRegistryHandler:
         print(f"✅ Transaction confirmed: {receipt['transactionHash'].hex()}")
         return receipt
 
-    def mark_eligible(self, cc):
+    def mark_eligible(self, cc, status):
         print(f"➡️ Marking student {cc} as eligible...")
-        return self.send_transaction(self.contract.functions.markEligible(cc))
+        return self.send_transaction(self.contract.functions.updateEligibility(cc, status, "null"))
 
-    def mark_ineligible(self, cc, reason):
+    def mark_ineligible(self, cc, status, reason):
         print(f"➡️ Marking student {cc} as ineligible...")
-        return self.send_transaction(self.contract.functions.markIneligible(cc, reason))
+        return self.send_transaction(self.contract.functions.updateEligibility(cc, status, reason))
 
     def issue_diploma_for_cc(self, cc, pdf_path):
         print(f"🎓 Issuing diploma for student CC: {cc}")
@@ -86,6 +89,15 @@ class DiplomaRegistryHandler:
             from_block=self.w3.eth.block_number,
             to_block='latest'
         )
+        student_reverification = self.contract.events.Recheck.create_filter(
+            from_block = self.w3.eth.block_number,
+            to_block ='latest'
+        )
+        student_already_eligible = self.contract.events.StudentAlreadyEligible.create_filter(
+            from_block = self.w3.eth.block_number,
+            to_block = 'latest'
+        )
+
 
         while True:
             for event in submitted_filter.get_new_entries():
@@ -95,11 +107,17 @@ class DiplomaRegistryHandler:
 
                 status, reason = check_student_status(cc)
                 if status:
-                    self.mark_eligible(hashed_cc)
+                    self.mark_eligible(hashed_cc, status)
                 else:
-                    self.mark_ineligible(hashed_cc, reason)
+                    self.mark_ineligible(hashed_cc, status, reason)
+
             for event in studentremoved_filter.get_new_entries():
                 remove_student_by_hash(event.args['ccHash'])
+
+            for event in student_already_eligible.get_new_entries():
+                hashed_cc = event.args['ccHash']
+                cc = get_cc_by_hash(hashed_cc)
+                print(f"✅ Student already marked eligible: {cc}")
 
             for event in eligible_filter.get_new_entries():
                 hashed_cc = event.args['ccHash']
@@ -110,6 +128,18 @@ class DiplomaRegistryHandler:
                 hashed_cc = event.args['ccHash']
                 cc = get_cc_by_hash(hashed_cc)
                 print(f"❌ Student marked ineligible: {cc}")
+
+            for event in student_reverification.get_new_entries():
+                hashed_cc = event.args['ccHash']
+                cc= get_cc_by_hash(hashed_cc)
+                print(f"🎓 Rechecking student {cc}")
+                status, reason = check_student_status(cc)
+                if status:
+                    print(f"✅ Student is now eligible: {cc}")
+                    self.mark_eligible(hashed_cc, status)
+                else:
+                    print(f"❌ Student is still ineligible: {cc}")
+                    self.mark_ineligible(hashed_cc, status, reason)
 
             for event in issued_filter.get_new_entries():
                 print(f"🎓 Diploma issued for: CC Sig = {event.args['ccSig'].hex()}")
