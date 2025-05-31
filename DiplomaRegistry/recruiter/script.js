@@ -14,14 +14,14 @@ fileInput.addEventListener('change', () => {
   const file = fileInput.files[0];
   if (file) {
     if (isPDF(file)) {
-      fileNameDisplay.textContent = `Selecionado: ${file.name}`;
+      fileNameDisplay.textContent = `Selected: ${file.name}`;
     } else {
-      fileNameDisplay.textContent = "Erro: Só são permitidos arquivos PDF";
+      fileNameDisplay.textContent = "Error: only PDF files are allowed";
       fileInput.value = '';
-      alert("Por favor, selecione um arquivo PDF válido.");
+      alert("Select a valid PDF file.");
     }
   } else {
-    fileNameDisplay.textContent = "Nenhum arquivo selecionado";
+    fileNameDisplay.textContent = "No file selected";
   }
 });
 ccInput.addEventListener('change', () => {
@@ -30,29 +30,27 @@ ccInput.addEventListener('change', () => {
 });
 
 uploadForm.addEventListener('submit', async (e) => {
-  console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
   e.preventDefault();
   const file = fileInput.files[0];
   const cc = ccInput.value.trim();
   if (!file) {
-    alert("Por favor, selecione um arquivo PDF primeiro.");
+    alert("Select a PDF file first.");
     return;
   }
   if (!isPDF(file)) {
-    alert("Arquivo inválido! Selecione um arquivo PDF.");
+    alert("Ivalid file! Select a PDF file.");
     return;
   }
   if (!cc) {
-    alert("Por favor, insira o número do CC.");
+    alert("Insert your CC.");
     return;
   }
 
   const formData = new FormData();
   formData.append('file', file);
   formData.append('cc', cc);
-  console.log("BBBBBBBBBBBBBB")
   verificationStatus.style.display = "inline-block";
-  verificationStatus.textContent = "A verificar a combinação Diploma <=> CC";
+  verificationStatus.textContent = `Verifying the combination Diploma: ${file.name} <=> CC: ${cc}...`;
   try {
     const response = await fetch('http://127.0.0.1:5000/api/diploma-validation', {
       method: 'POST',
@@ -63,16 +61,22 @@ uploadForm.addEventListener('submit', async (e) => {
     if (response.ok && result.valid) {
       console.log("valid")
       verificationStatus.style.display = "inline-block";
-      verificationStatus.textContent = "✅ Diploma reconhecido";
+      verificationStatus.textContent = "✅ This diploma is accredited and recognized";
+      verificationStatus.style.fontWeight = "bold";
+      verificationStatus.style.fontSize = "1.5rem";
 
     } else {
       console.log("not valid")
       verificationStatus.style.display = "inline-block";
-      verificationStatus.textContent = "❌ Diploma inválido";
+      verificationStatus.textContent = "❌ This diploma is not accredited or recognized";
+      verificationStatus.style.fontWeight = "bold";
+      verificationStatus.style.fontSize = "1.5rem";
     }
 
   } catch (error) {
     verificationStatus.style.display = "inline-block";
-    verificationStatus.textContent = "⚠️ Erro na validação";
+    verificationStatus.textContent = "⚠️ Error in validation";
+    verificationStatus.style.fontWeight = "bold";
+    verificationStatus.style.fontSize = "1.5rem";
   }
 });

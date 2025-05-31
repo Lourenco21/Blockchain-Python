@@ -1,8 +1,5 @@
 import json
 import time
-from contextlib import nullcontext
-
-from traits.trait_types import self
 from web3 import Web3
 from createPdf import generate_diploma_by_id
 from utils import keccak256_hash, sign_hash
